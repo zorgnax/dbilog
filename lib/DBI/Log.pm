@@ -5,7 +5,7 @@ no strict;
 no warnings;
 use DBI;
 
-our $VERSION = "0.01";
+our $VERSION = "0.02";
 our $trace = 1;
 our $path = "STDERR";
 our $array;
@@ -173,10 +173,11 @@ DBI::Log - Log all DBI queries
 
 =head1 DESCRIPTION
 
-If you have a perl script that uses DBI, you can use this module
-to log all queries that are made before it. By default it will log
-to STDERR, which is useful for command line scripts and for CGI
-scripts since STDERR will appear in the error log.
+You can use this module to log all queries that are made with DBI.
+You just need to include it in your script and it will work
+automatically.  By default, it will send output to STDERR, which
+is useful for command line scripts and for CGI scripts since STDERR
+will appear in the error log.
 
 If you want to log elsewhere, set the $DBI::Log::path variable to
 a different location.
@@ -184,7 +185,8 @@ a different location.
     $DBI::Log::path = "~/querylog.sql";
 
 The log is formatted as SQL, so if you look at it in an editor, the
-syntax will be highlighted. This is what the output looks like:
+syntax will be highlighted correctly. This is what the output may look
+like:
 
     -- Fri Sep 11 17:31:18 2015 taking 0 seconds
     -- execute t/test.t 18

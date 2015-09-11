@@ -1,5 +1,8 @@
 Revision history for DBI::Log
 
+0.02  Fri Sep 11 18:07:52 CDT 2015
+    - Improved the wording in the docs
+
 0.01  Fri Sep 11 17:33:06 CDT 2015
     - Set up initial structure for DBI::Log
 
