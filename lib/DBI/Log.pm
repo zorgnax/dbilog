@@ -5,7 +5,7 @@ no strict;
 no warnings;
 use DBI;
 
-our $VERSION = "0.02";
+our $VERSION = "0.03";
 our $trace = 1;
 our $path = "STDERR";
 our $array;
@@ -216,6 +216,14 @@ DBI->trace(1), but the output is not easy to read through.
 
 This module integrates placeholder values into the query, so the
 log will contain valid queries.
+
+=head1 METACPAN
+
+L<https://metacpan.org/pod/DBI::Log>
+
+=head1 REPOSITORY
+
+L<https://github.com/zorgnax/dbilog>
 
 =head1 AUTHOR
 

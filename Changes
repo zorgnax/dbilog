@@ -1,5 +1,8 @@
 Revision history for DBI::Log
 
+0.03  Thu Sep 17 13:18:08 CDT 2015
+    - Added github links to docs
+
 0.02  Fri Sep 11 18:07:52 CDT 2015
     - Improved the wording in the docs
 
