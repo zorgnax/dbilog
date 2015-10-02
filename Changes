@@ -1,5 +1,8 @@
 Revision history for DBI::Log
 
+0.04  Fri Oct  2 10:51:16 CDT 2015
+    - Fixed selectcol_arrayref logging
+
 0.03  Thu Sep 17 13:18:08 CDT 2015
     - Added github links to docs
 

@@ -5,7 +5,7 @@ no strict;
 no warnings;
 use DBI;
 
-our $VERSION = "0.03";
+our $VERSION = "0.04";
 our $trace = 1;
 our $path = "STDERR";
 our $array;
@@ -36,11 +36,11 @@ my $orig_selectall_arrayref = \&DBI::db::selectall_arrayref;
     return $retval;
 };
 
-my $orig_selectall_hashref = \&DBI::db::selectall_hashref;
+my $orig_selectcol_arrayref = \&DBI::db::selectcol_arrayref;
 *DBI::db::selectcol_arrayref = sub {
     my ($dbh, $query, $yup, @args) = @_;
     my $time1 = time();
-    my $retval = eval {$orig_selectall_arrayref->($dbh, $query, $yup, @args)};
+    my $retval = eval {$orig_selectcol_arrayref->($dbh, $query, $yup, @args)};
     my $error = $@;
     my $time2 = time();
     log_("selectcol_arrayref", $time1, $time2, $dbh, $query, \@args);
