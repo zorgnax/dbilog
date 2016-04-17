@@ -4,6 +4,7 @@ use 5.006;
 no strict;
 no warnings;
 use DBI;
+use Term::ANSIColor qw(color);
 
 our $VERSION = "0.04";
 our $trace = $ENV{DBI_LOG_NOTRACE} ? 0 : 1;
@@ -129,14 +130,29 @@ sub log_ {
         $info .= "-- $sub $file $line\n";
         last if !$trace;
     }
+
+    open_log();
+
+    if ( -t $fh ) {
+        $i = 0;
+        foreach ( @{$args} ) {
+            $args->[$i] = color('bright_green') . $args->[$i] . color('bright_blue');
+            $i++;
+        }
+    }
+
     $i = 0;
     if ($dbh) {
         $query =~ s/\?/$dbh->quote($args->[$i++])/eg;
     }
 
-    open_log();
     if ($fh) {
-        print $fh "$info$query\n\n";
+        my $is_tty = -t $fh;
+        print $fh color('white') if $is_tty;
+        print $fh $info;
+        print $fh color('bright_blue') if $is_tty;
+        print $fh "$query\n\n";
+        print $fh color('reset') if $is_tty;
     }
     if ($array) {
         push @queries, $query;
