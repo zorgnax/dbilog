@@ -5,7 +5,7 @@ no strict;
 no warnings;
 use DBI;
 
-our $VERSION = "0.04";
+our $VERSION = "0.05";
 our $trace = 1;
 our $path = "STDERR";
 our $array;
