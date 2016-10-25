@@ -4,6 +4,7 @@ use 5.006;
 no strict;
 no warnings;
 use DBI;
+use Term::ANSIColor qw(color);
 
 our $VERSION = "0.05";
 our $trace = 1;
@@ -129,14 +130,29 @@ sub log_ {
         $info .= "-- $sub $file $line\n";
         last if !$trace;
     }
+
+    open_log();
+
+    if ( -t $fh ) {
+        $i = 0;
+        foreach ( @{$args} ) {
+            $args->[$i] = color('bright_green') . $args->[$i] . color('bright_blue');
+            $i++;
+        }
+    }
+
     $i = 0;
     if ($dbh) {
         $query =~ s/\?/$dbh->quote($args->[$i++])/eg;
     }
 
-    open_log();
     if ($fh) {
-        print $fh "$info$query\n\n";
+        my $is_tty = -t $fh;
+        print $fh color('white') if $is_tty;
+        print $fh $info;
+        print $fh color('bright_blue') if $is_tty;
+        print $fh "$query\n\n";
+        print $fh color('reset') if $is_tty;
     }
     if ($array) {
         push @queries, $query;
@@ -162,6 +178,8 @@ sub open_log {
 1;
 
 __END__
+
+=encoding utf8
 
 =head1 NAME
 
@@ -206,7 +224,10 @@ might be highlighted. This is what the output may look like:
 
 Each query in the log is prepended with the date, the time it took
 to run, and a stack trace. You can disable the stack trace by setting
-$DBI::Log::trace to a false value.
+$DBI::Log::trace to a false value or by setting the C<DBI_LOG_NOTRACE>
+environment variable (useful when running from the command line):
+
+    DBI_LOG_NOTRACE=1 perl -MDBI::Log program.pl
 
 You can set $DBI::Log::array to a true value and then all queries
 will end up in @DBI::Log::queries.
@@ -228,6 +249,10 @@ L<https://github.com/zorgnax/dbilog>
 =head1 AUTHOR
 
 Jacob Gelbman, E<lt>gelbman@gmail.comE<gt>
+
+=head1 CONTRIBUTORS
+
+Árpád Szász, E<lt>arpad.szasz@plenum.roE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
