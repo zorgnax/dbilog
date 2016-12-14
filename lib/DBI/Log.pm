@@ -4,7 +4,6 @@ use 5.006;
 no strict;
 no warnings;
 use DBI;
-use Term::ANSIColor qw(color);
 
 our $VERSION = "0.05";
 our $trace = 1;
@@ -130,29 +129,13 @@ sub log_ {
         $info .= "-- $sub $file $line\n";
         last if !$trace;
     }
-
     open_log();
-
-    if ( -t $fh ) {
-        $i = 0;
-        foreach ( @{$args} ) {
-            $args->[$i] = color('bright_green') . $args->[$i] . color('bright_blue');
-            $i++;
-        }
-    }
-
-    $i = 0;
+    my $i = 0;
     if ($dbh) {
-        $query =~ s/\?/$dbh->quote($args->[$i++])/eg;
+        $query =~ s{\?}{$dbh->quote($args->[$i++])}eg;
     }
-
     if ($fh) {
-        my $is_tty = -t $fh;
-        print $fh color('white') if $is_tty;
-        print $fh $info;
-        print $fh color('bright_blue') if $is_tty;
-        print $fh "$query\n\n";
-        print $fh color('reset') if $is_tty;
+        print $fh "$info$query\n\n";
     }
     if ($array) {
         push @queries, $query;
@@ -168,9 +151,12 @@ sub open_log {
     elsif ($path eq "STDOUT") {
         $fh = \*STDOUT;
     }
-    else {
+    elsif ($path =~ m{^~/}) {
         my $home = (getpwuid($<))[7];
         $path =~ s{^~/}{$home/};
+        open $fh, ">>", $path or die "Can't open $path: $!";
+    }
+    else {
         open $fh, ">>", $path or die "Can't open $path: $!";
     }
 }
