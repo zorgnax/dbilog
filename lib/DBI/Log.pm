@@ -177,10 +177,7 @@ might be highlighted. This is what the output may look like:
 
 Each query in the log is prepended with the date, the time it took
 to run, and a stack trace. You can disable the stack trace by setting
-$DBI::Log::trace to a false value or by setting the C<DBI_LOG_NOTRACE>
-environment variable (useful when running from the command line):
-
-    DBI_LOG_NOTRACE=1 perl -MDBI::Log program.pl
+$DBI::Log::trace to a false value.
 
 You can set $DBI::Log::array to a true value and then all queries
 will end up in @DBI::Log::queries.
