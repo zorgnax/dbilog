@@ -1,7 +1,8 @@
 Revision history for DBI::Log
 
 0.06  Wed Dec 14 14:40:37 CST 2016
-    - Remove colors.
+    - Remove colors
+    - Immediately print queries
 
 0.05  Tue Oct 25 13:24:46 CDT 2016
     - Test nice

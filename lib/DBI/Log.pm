@@ -5,7 +5,7 @@ no strict;
 no warnings;
 use DBI;
 
-our $VERSION = "0.05";
+our $VERSION = "0.06";
 our $trace = 1;
 our $path = "STDERR";
 our $array;
@@ -15,101 +15,69 @@ our @queries;
 my $orig_execute = \&DBI::st::execute;
 *DBI::st::execute = sub {
     my ($sth, @args) = @_;
-    my $time1 = time();
-    my $retval = eval {$orig_execute->($sth, @args)};
-    my $error = $@;
-    my $time2 = time();
-    log_("execute", $time1, $time2, $sth->{Database}, $sth->{Statement}, \@args);
-    die $error if $error;
+    log_("execute", $sth->{Database}, $sth->{Statement}, \@args);
+    my $retval = $orig_execute->($sth, @args);
     return $retval;
 };
 
 my $orig_selectall_arrayref = \&DBI::db::selectall_arrayref;
 *DBI::db::selectall_arrayref = sub {
     my ($dbh, $query, $yup, @args) = @_;
-    my $time1 = time();
-    my $retval = eval {$orig_selectall_arrayref->($dbh, $query, $yup, @args)};
-    my $error = $@;
-    my $time2 = time();
-    log_("selectall_arrayref", $time1, $time2, $dbh, $query, \@args);
-    die $error if $error;
+    log_("selectall_arrayref", $dbh, $query, \@args);
+    my $retval = $orig_selectall_arrayref->($dbh, $query, $yup, @args);
     return $retval;
 };
 
 my $orig_selectcol_arrayref = \&DBI::db::selectcol_arrayref;
 *DBI::db::selectcol_arrayref = sub {
     my ($dbh, $query, $yup, @args) = @_;
-    my $time1 = time();
-    my $retval = eval {$orig_selectcol_arrayref->($dbh, $query, $yup, @args)};
-    my $error = $@;
-    my $time2 = time();
-    log_("selectcol_arrayref", $time1, $time2, $dbh, $query, \@args);
-    die $error if $error;
+    log_("selectcol_arrayref", $dbh, $query, \@args);
+    my $retval = $orig_selectcol_arrayref->($dbh, $query, $yup, @args);
     return $retval;
 };
 
 my $orig_selectrow_arrayref = \&DBI::db::selectrow_arrayref;
 *DBI::db::selectall_hashref = sub {
     my ($dbh, $query, $yup, @args) = @_;
-    my $time1 = time();
-    my $retval = eval {$orig_selectall_hashref->($dbh, $query, $yup, @args)};
-    my $error = $@;
-    my $time2 = time();
-    log_("selectall_hashref", $time1, $time2, $dbh, $query, \@args);
-    die $error if $error;
+    log_("selectall_hashref", $dbh, $query, \@args);
+    my $retval = $orig_selectall_hashref->($dbh, $query, $yup, @args);
     return $retval;
 };
 
 my $orig_selectrow_array = \&DBI::db::selectrow_array;
 *DBI::db::selectrow_arrayref = sub {
     my ($dbh, $query, $yup, @args) = @_;
-    my $time1 = time();
-    my $retval = eval {$orig_selectrow_arrayref->($dbh, $query, $yup, @args)};
-    my $error = $@;
-    my $time2 = time();
-    log_("selectrow_arrayref", $time1, $time2, $dbh, $query, \@args);
-    die $error if $error;
+    log_("selectrow_arrayref", $dbh, $query, \@args);
+    my $retval = $orig_selectrow_arrayref->($dbh, $query, $yup, @args);
     return $retval;
 };
 
 my $orig_selectrow_hashref = \&DBI::db::selectrow_hashref;
 *DBI::db::selectrow_array = sub {
     my ($dbh, $query, $yup, @args) = @_;
-    my $time1 = time();
-    my $retval = eval {$orig_selectrow_array->($dbh, $query, $yup, @args)};
-    my $error = $@;
-    my $time2 = time();
-    log_("selectrow_array", $time1, $time2, $dbh, $query, \@args);
-    die $error if $error;
+    log_("selectrow_array", $dbh, $query, \@args);
+    my $retval = $orig_selectrow_array->($dbh, $query, $yup, @args);
     return $retval;
 };
 
 my $orig_selectcol_arrayref = \&DBI::db::selectcol_arrayref;
 *DBI::db::selectrow_hashref = sub {
     my ($dbh, $query, $yup, @args) = @_;
-    my $time1 = time();
-    my $retval = eval {$orig_selectrow_hashref->($dbh, $query, $yup, @args)};
-    my $error = $@;
-    my $time2 = time();
-    log_("selectrow_hashref", $time1, $time2, $dbh, $query, \@args);
-    die $error if $error;
+    log_("selectrow_hashref", $dbh, $query, \@args);
+    my $retval = $orig_selectrow_hashref->($dbh, $query, $yup, @args);
     return $retval;
 };
 
 my $orig_do = \&DBI::db::do;
 *DBI::db::do = sub {
     my ($dbh, $query, $yup, @args) = @_;
-    my $time1 = time();
-    my $retval = eval {$orig_do->($dbh, $query, $yup, @args)};
-    my $error = $@;
-    my $time2 = time();
-    log_("do", $time1, $time2, $dbh, $query, \@args);
-    die $error if $error;
+    log_("do", $dbh, $query, \@args);
+    my $retval = $orig_do->($dbh, $query, $yup, @args);
     return $retval;
 };
 
 sub log_ {
-    my ($name, $time1, $time2, $dbh, $query, $args) = @_;
+    my ($name, $dbh, $query, $args) = @_;
     my $i = 0;
     my @callers;
     while (my @caller = caller($i++)) {
@@ -118,8 +86,7 @@ sub log_ {
     # subs like selectall_arrayref will call execute within it, we don't
     # want to log the same query twice
     return if (grep {$_->[0] eq "DBI::Log"} @callers) > 1;
-    my $diff = $time2 - $time1;
-    my $info = "-- " . scalar(localtime($time1)) . " taking $diff seconds\n";
+    my $info = "-- " . scalar(localtime()) . "\n";
     $i = 0;
     for my $caller (@callers) {
         my ($package, $file, $line, $sub) = @$caller;
