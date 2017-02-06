@@ -5,76 +5,78 @@ no strict;
 no warnings;
 use DBI;
 
-our $VERSION = "0.06";
+our $VERSION = "0.07";
 our $trace = 1;
 our $path = "STDERR";
 our $array;
 our $fh;
 our @queries;
 
-my $orig_execute = \&DBI::st::execute;
-*DBI::st::execute = sub {
-    my ($sth, @args) = @_;
-    log_("execute", $sth->{Database}, $sth->{Statement}, \@args);
-    my $retval = $orig_execute->($sth, @args);
-    return $retval;
-};
+INIT {
+    my $orig_execute = \&DBI::st::execute;
+    *DBI::st::execute = sub {
+        my ($sth, @args) = @_;
+        log_("execute", $sth->{Database}, $sth->{Statement}, \@args);
+        my $retval = $orig_execute->($sth, @args);
+        return $retval;
+    };
 
-my $orig_selectall_arrayref = \&DBI::db::selectall_arrayref;
-*DBI::db::selectall_arrayref = sub {
-    my ($dbh, $query, $yup, @args) = @_;
-    log_("selectall_arrayref", $dbh, $query, \@args);
-    my $retval = $orig_selectall_arrayref->($dbh, $query, $yup, @args);
-    return $retval;
-};
+    my $orig_selectall_arrayref = \&DBI::db::selectall_arrayref;
+    *DBI::db::selectall_arrayref = sub {
+        my ($dbh, $query, $yup, @args) = @_;
+        log_("selectall_arrayref", $dbh, $query, \@args);
+        my $retval = $orig_selectall_arrayref->($dbh, $query, $yup, @args);
+        return $retval;
+    };
 
-my $orig_selectcol_arrayref = \&DBI::db::selectcol_arrayref;
-*DBI::db::selectcol_arrayref = sub {
-    my ($dbh, $query, $yup, @args) = @_;
-    log_("selectcol_arrayref", $dbh, $query, \@args);
-    my $retval = $orig_selectcol_arrayref->($dbh, $query, $yup, @args);
-    return $retval;
-};
+    my $orig_selectcol_arrayref = \&DBI::db::selectcol_arrayref;
+    *DBI::db::selectcol_arrayref = sub {
+        my ($dbh, $query, $yup, @args) = @_;
+        log_("selectcol_arrayref", $dbh, $query, \@args);
+        my $retval = $orig_selectcol_arrayref->($dbh, $query, $yup, @args);
+        return $retval;
+    };
 
-my $orig_selectrow_arrayref = \&DBI::db::selectrow_arrayref;
-*DBI::db::selectall_hashref = sub {
-    my ($dbh, $query, $yup, @args) = @_;
-    log_("selectall_hashref", $dbh, $query, \@args);
-    my $retval = $orig_selectall_hashref->($dbh, $query, $yup, @args);
-    return $retval;
-};
+    my $orig_selectall_hashref = \&DBI::db::selectall_hashref;
+    *DBI::db::selectall_hashref = sub {
+        my ($dbh, $query, $yup, @args) = @_;
+        log_("selectall_hashref", $dbh, $query, \@args);
+        my $retval = $orig_selectall_hashref->($dbh, $query, $yup, @args);
+        return $retval;
+    };
 
-my $orig_selectrow_array = \&DBI::db::selectrow_array;
-*DBI::db::selectrow_arrayref = sub {
-    my ($dbh, $query, $yup, @args) = @_;
-    log_("selectrow_arrayref", $dbh, $query, \@args);
-    my $retval = $orig_selectrow_arrayref->($dbh, $query, $yup, @args);
-    return $retval;
-};
+    my $orig_selectrow_arrayref = \&DBI::db::selectrow_arrayref;
+    *DBI::db::selectrow_arrayref = sub {
+        my ($dbh, $query, $yup, @args) = @_;
+        log_("selectrow_arrayref", $dbh, $query, \@args);
+        my $retval = $orig_selectrow_arrayref->($dbh, $query, $yup, @args);
+        return $retval;
+    };
 
-my $orig_selectrow_hashref = \&DBI::db::selectrow_hashref;
-*DBI::db::selectrow_array = sub {
-    my ($dbh, $query, $yup, @args) = @_;
-    log_("selectrow_array", $dbh, $query, \@args);
-    my $retval = $orig_selectrow_array->($dbh, $query, $yup, @args);
-    return $retval;
-};
+    my $orig_selectrow_array = \&DBI::db::selectrow_array;
+    *DBI::db::selectrow_array = sub {
+        my ($dbh, $query, $yup, @args) = @_;
+        log_("selectrow_array", $dbh, $query, \@args);
+        my $retval = $orig_selectrow_array->($dbh, $query, $yup, @args);
+        return $retval;
+    };
 
-my $orig_selectcol_arrayref = \&DBI::db::selectcol_arrayref;
-*DBI::db::selectrow_hashref = sub {
-    my ($dbh, $query, $yup, @args) = @_;
-    log_("selectrow_hashref", $dbh, $query, \@args);
-    my $retval = $orig_selectrow_hashref->($dbh, $query, $yup, @args);
-    return $retval;
-};
+    my $orig_selectrow_hashref = \&DBI::db::selectrow_hashref;
+    *DBI::db::selectrow_hashref = sub {
+        my ($dbh, $query, $yup, @args) = @_;
+        log_("selectrow_hashref", $dbh, $query, \@args);
+        my $retval = $orig_selectrow_hashref->($dbh, $query, $yup, @args);
+        return $retval;
+    };
 
-my $orig_do = \&DBI::db::do;
-*DBI::db::do = sub {
-    my ($dbh, $query, $yup, @args) = @_;
-    log_("do", $dbh, $query, \@args);
-    my $retval = $orig_do->($dbh, $query, $yup, @args);
-    return $retval;
-};
+    my $orig_do = \&DBI::db::do;
+    *DBI::db::do = sub {
+        my ($dbh, $query, $yup, @args) = @_;
+        log_("do", $dbh, $query, \@args);
+        my $retval = $orig_do->($dbh, $query, $yup, @args);
+        return $retval;
+    };
+}
 
 sub log_ {
     my ($name, $dbh, $query, $args) = @_;
