@@ -13,7 +13,7 @@ our %opts = (
     fh => undef,
 );
 
-INIT {
+
     my $orig_execute = \&DBI::st::execute;
     *DBI::st::execute = sub {
         my ($sth, @args) = @_;
@@ -85,7 +85,7 @@ INIT {
         dbilog2($log);
         return $retval;
     };
-}
+
 
 sub import {
     my ($package, %args) = @_;
@@ -241,4 +241,3 @@ it under the same terms as Perl itself, either Perl version 5.18.2 or,
 at your option, any later version of Perl 5 you may have available.
 
 =cut
-
