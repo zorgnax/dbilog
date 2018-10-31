@@ -9,7 +9,9 @@ END {
     unlink "foo.sql";
 };
 
-require ABC;
+eval {
+  use ABC;
+};
 
 
 my $output = `cat foo.sql`;

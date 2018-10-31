@@ -9,7 +9,7 @@ END {
     unlink "foo.sql";
 };
 
-require ABC;
+do "ABC.pm";
 
 
 my $output = `cat foo.sql`;
