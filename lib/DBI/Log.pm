@@ -11,6 +11,7 @@ our %opts = (
     trace => 0,
     timing => 0,
     fh => undef,
+    delimiter => q{},
 );
 
 INIT {
@@ -136,7 +137,7 @@ sub dbilog {
     }
     $query =~ s/^\s*\n|\s*$//g;
     $info = "-- " . scalar(localtime()) . "\n";
-    print {$opts{fh}} "$info$stack$query\n";
+    print {$opts{fh}} "$info$stack$query$opts{delimiter}\n";
     $log->{time1} = time();
     return $log;
 }
@@ -189,6 +190,11 @@ If you want timing information about how long the queries took to
 run add the timing option (on the use line).
 
     use DBI::Log timing => 1;
+
+If you want a delimiter appended to each statement, set the delimiter option
+(on the use line).  The default is to have no delimiter.
+
+    use DBI::Log delimiter => q{;};
 
 The log is formatted as SQL, so if you look at it in an editor, it
 might be highlighted. This is what the output may look like:
