@@ -12,6 +12,7 @@ our %opts = (
     trace => 0,
     timing => 0,
     fh => undef,
+    exclude => undef,
 );
 
 my $orig_execute = \&DBI::st::execute;
@@ -126,17 +127,45 @@ sub pre_query {
             }
         }
     }
-    my $stack = "";
+    my @callers;
     for (my $i = 0; my @caller = caller($i); $i++) {
-        my ($package, $file, $line, $sub) = @caller;
-        if ($package eq "DBI::Log") {
-            next;
-        }
-        $sub =~ s/.*:://;
-        $sub = $name if !$stack;
-        $stack .= "-- $sub $file $line\n";
-        last if !$opts{trace};
+        push @callers, \@caller;
     }
+
+    # Order the call stack based on the highest level calls first, then the
+    # lower level calls. Once you reach a package that is excluded, do not show
+    # any more lines in the stack trace. By default, it will exclude anything
+    # past the DBI::Log package, but if user provides an exclude option, it will
+    # stop there.
+    my @filtered_callers;
+    CALLER: for my $caller (reverse @callers) {
+        my ($package, $file, $line, $sub) = @$caller;
+        if ($package eq "DBI::Log") {
+            last CALLER;
+        }
+        if ($opts{exclude}) {
+            for my $item (@{$opts{exclude}}) {
+                if ($package =~ /^$item(::|$)/) {
+                    last CALLER;
+                }
+            }
+        }
+        push @filtered_callers, $caller;
+
+    }
+    if (!$opts{trace}) {
+        @filtered_callers = ($filtered_callers[-1]);
+    }
+
+    my $stack = "";
+    for my $caller (@filtered_callers) {
+        my ($package, $file, $line, $sub) = @$caller;
+        my $short_sub = $sub;
+        $short_sub =~ s/.*:://;
+        $short_sub = $name if $sub eq "DBI::Log::__ANON__";
+        $stack .= "-- $short_sub $file $line\n";
+    }
+
     if ($dbh) {
         my $i = 0;
         $query =~ s{\?}{$dbh->quote($args->[$i++])}eg;
@@ -181,21 +210,26 @@ automatically.  By default, it will send output to STDERR, which
 is useful for command line scripts and for CGI scripts since STDERR
 will appear in the error log.
 
-If you want to log elsewhere, set the file option (on the use line) to
-a different location.
+If you want to log elsewhere, set the file option to a different location.
 
     use DBI::Log file => "~/querylog.sql";
 
 Each query in the log is prepended with the date and the place in
 the code where it was run from. You can add a full stack trace by
-setting the trace option (on the use line).
+setting the trace option.
 
     use DBI::Log trace => 1;
 
 If you want timing information about how long the queries took to
-run add the timing option (on the use line).
+run add the timing option.
 
     use DBI::Log timing => 1;
+
+If you want to exclude function calls from within a certain package appearing in the stack trace, you can use the exclude option like this:
+
+    use DBI::Log exclude => ["DBIx::Class"];
+
+It will exclude any package starting with that name, for example DBIx::Class::ResultSet DBI::Log is excluded by default.
 
 The log is formatted as SQL, so if you look at it in an editor, it
 might be highlighted. This is what the output may look like:
