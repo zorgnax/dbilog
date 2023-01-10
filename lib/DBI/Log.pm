@@ -6,7 +6,7 @@ no warnings;
 use DBI;
 use Time::HiRes;
 
-our $VERSION = "0.08";
+our $VERSION = "0.09";
 our %opts = (
     file => $file,
     trace => 0,
@@ -14,78 +14,77 @@ our %opts = (
     fh => undef,
 );
 
+my $orig_execute = \&DBI::st::execute;
+*DBI::st::execute = sub {
+    my ($sth, @args) = @_;
+    my $log = pre_query("execute", $sth->{Database}, $sth->{Statement}, \@args);
+    my $retval = $orig_execute->($sth, @args);
+    post_query($log);
+    return $retval;
+};
 
-    my $orig_execute = \&DBI::st::execute;
-    *DBI::st::execute = sub {
-        my ($sth, @args) = @_;
-        my $log = dbilog("execute", $sth->{Database}, $sth->{Statement}, \@args);
-        my $retval = $orig_execute->($sth, @args);
-        dbilog2($log);
-        return $retval;
-    };
+my $orig_selectall_arrayref = \&DBI::db::selectall_arrayref;
+*DBI::db::selectall_arrayref = sub {
+    my ($dbh, $query, $yup, @args) = @_;
+    my $log = pre_query("selectall_arrayref", $dbh, $query, \@args);
+    my $retval = $orig_selectall_arrayref->($dbh, $query, $yup, @args);
+    post_query($log);
+    return $retval;
+};
 
-    my $orig_selectall_arrayref = \&DBI::db::selectall_arrayref;
-    *DBI::db::selectall_arrayref = sub {
-        my ($dbh, $query, $yup, @args) = @_;
-        my $log = dbilog("selectall_arrayref", $dbh, $query, \@args);
-        my $retval = $orig_selectall_arrayref->($dbh, $query, $yup, @args);
-        dbilog2($log);
-        return $retval;
-    };
+my $orig_selectcol_arrayref = \&DBI::db::selectcol_arrayref;
+*DBI::db::selectcol_arrayref = sub {
+    my ($dbh, $query, $yup, @args) = @_;
+    my $log = pre_query("selectcol_arrayref", $dbh, $query, \@args);
+    my $retval = $orig_selectcol_arrayref->($dbh, $query, $yup, @args);
+    post_query($log);
+    return $retval;
+};
 
-    my $orig_selectcol_arrayref = \&DBI::db::selectcol_arrayref;
-    *DBI::db::selectcol_arrayref = sub {
-        my ($dbh, $query, $yup, @args) = @_;
-        my $log = dbilog("selectcol_arrayref", $dbh, $query, \@args);
-        my $retval = $orig_selectcol_arrayref->($dbh, $query, $yup, @args);
-        dbilog2($log);
-        return $retval;
-    };
+my $orig_selectall_hashref = \&DBI::db::selectall_hashref;
+*DBI::db::selectall_hashref = sub {
+    my ($dbh, $query, $yup, @args) = @_;
+    my $log = pre_query("selectall_hashref", $dbh, $query, \@args);
+    my $retval = $orig_selectall_hashref->($dbh, $query, $yup, @args);
+    post_query($log);
+    return $retval;
+};
 
-    my $orig_selectall_hashref = \&DBI::db::selectall_hashref;
-    *DBI::db::selectall_hashref = sub {
-        my ($dbh, $query, $yup, @args) = @_;
-        my $log = dbilog("selectall_hashref", $dbh, $query, \@args);
-        my $retval = $orig_selectall_hashref->($dbh, $query, $yup, @args);
-        dbilog2($log);
-        return $retval;
-    };
+my $orig_selectrow_arrayref = \&DBI::db::selectrow_arrayref;
+*DBI::db::selectrow_arrayref = sub {
+    my ($dbh, $query, $yup, @args) = @_;
+    my $log = pre_query("selectrow_arrayref", $dbh, $query, \@args);
+    my $retval = $orig_selectrow_arrayref->($dbh, $query, $yup, @args);
+    post_query($log);
+    return $retval;
+};
 
-    my $orig_selectrow_arrayref = \&DBI::db::selectrow_arrayref;
-    *DBI::db::selectrow_arrayref = sub {
-        my ($dbh, $query, $yup, @args) = @_;
-        my $log = dbilog("selectrow_arrayref", $dbh, $query, \@args);
-        my $retval = $orig_selectrow_arrayref->($dbh, $query, $yup, @args);
-        dbilog2($log);
-        return $retval;
-    };
+my $orig_selectrow_array = \&DBI::db::selectrow_array;
+*DBI::db::selectrow_array = sub {
+    my ($dbh, $query, $yup, @args) = @_;
+    my $log = pre_query("selectrow_array", $dbh, $query, \@args);
+    my $retval = $orig_selectrow_array->($dbh, $query, $yup, @args);
+    post_query($log);
+    return $retval;
+};
 
-    my $orig_selectrow_array = \&DBI::db::selectrow_array;
-    *DBI::db::selectrow_array = sub {
-        my ($dbh, $query, $yup, @args) = @_;
-        my $log = dbilog("selectrow_array", $dbh, $query, \@args);
-        my $retval = $orig_selectrow_array->($dbh, $query, $yup, @args);
-        dbilog2($log);
-        return $retval;
-    };
+my $orig_selectrow_hashref = \&DBI::db::selectrow_hashref;
+*DBI::db::selectrow_hashref = sub {
+    my ($dbh, $query, $yup, @args) = @_;
+    my $log = pre_query("selectrow_hashref", $dbh, $query, \@args);
+    my $retval = $orig_selectrow_hashref->($dbh, $query, $yup, @args);
+    post_query($log);
+    return $retval;
+};
 
-    my $orig_selectrow_hashref = \&DBI::db::selectrow_hashref;
-    *DBI::db::selectrow_hashref = sub {
-        my ($dbh, $query, $yup, @args) = @_;
-        my $log = dbilog("selectrow_hashref", $dbh, $query, \@args);
-        my $retval = $orig_selectrow_hashref->($dbh, $query, $yup, @args);
-        dbilog2($log);
-        return $retval;
-    };
-
-    my $orig_do = \&DBI::db::do;
-    *DBI::db::do = sub {
-        my ($dbh, $query, $yup, @args) = @_;
-        my $log = dbilog("do", $dbh, $query, \@args);
-        my $retval = $orig_do->($dbh, $query, $yup, @args);
-        dbilog2($log);
-        return $retval;
-    };
+my $orig_do = \&DBI::db::do;
+*DBI::db::do = sub {
+    my ($dbh, $query, $yup, @args) = @_;
+    my $log = pre_query("do", $dbh, $query, \@args);
+    my $retval = $orig_do->($dbh, $query, $yup, @args);
+    post_query($log);
+    return $retval;
+};
 
 
 sub import {
@@ -106,10 +105,17 @@ sub import {
     }
 }
 
-sub dbilog {
+sub pre_query {
     my ($name, $dbh, $query, $args) = @_;
     my $log = {};
     my $mcount = 0;
+
+    # Some DBI functions are composed of other DBI functions, so make sure we
+    # are only logging the top level one. For example $dbh->do() will call
+    # $dbh->execute() internally, so we need to make sure a DBI::Log function
+    # logs the $dbh->do() and not the internal $dbh->execute(). If multiple
+    # functions were called, we return and flag this log entry to be skipped in
+    # the post_query() part.
     for (my $i = 0; my @caller = caller($i); $i++) {
         my ($package, $file, $line, $sub) = @caller;
         if ($package eq "DBI::Log") {
@@ -142,7 +148,7 @@ sub dbilog {
     return $log;
 }
 
-sub dbilog2 {
+sub post_query {
     my ($log) = @_;
     return if $log->{skip};
     if ($opts{timing}) {
@@ -232,6 +238,8 @@ Jacob Gelbman, E<lt>gelbman@gmail.comE<gt>
 =head1 CONTRIBUTORS
 
 Árpád Szász, E<lt>arpad.szasz@plenum.roE<gt>
+Pavel Serikov
+David Precious
 
 =head1 COPYRIGHT AND LICENSE
 
