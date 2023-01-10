@@ -4,6 +4,7 @@ use 5.006;
 no strict;
 no warnings;
 use DBI;
+use Time::HiRes;
 
 our $VERSION = "0.08";
 our %opts = (
@@ -137,7 +138,7 @@ sub dbilog {
     $query =~ s/^\s*\n|\s*$//g;
     $info = "-- " . scalar(localtime()) . "\n";
     print {$opts{fh}} "$info$stack$query\n";
-    $log->{time1} = time();
+    $log->{time1} = Time::HiRes::time();
     return $log;
 }
 
@@ -145,8 +146,8 @@ sub dbilog2 {
     my ($log) = @_;
     return if $log->{skip};
     if ($opts{timing}) {
-        $log->{time2} = time();
-        my $diff = $log->{time2} - $log->{time1};
+        $log->{time2} = Time::HiRes::time();
+        my $diff = sprintf '%.3f', $log->{time2} - $log->{time1};
         print {$opts{fh}} "-- ${diff}s\n";
     }
     print {$opts{fh}} "\n";
