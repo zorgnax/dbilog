@@ -166,15 +166,18 @@ sub pre_query {
         $stack .= "-- $short_sub $file $line\n";
     }
 
+    if (ref($query) && ref($query) eq "DBI::st") {
+        $query = $query->{Statement};
+    }
+
     if ($dbh) {
         my $i = 0;
         $query =~ s{\?}{$dbh->quote($args->[$i++])}eg;
     }
 
-    my $query_sql = ref $query eq 'DBI::st' ? $query->{Statement} : $query;
-    $query_sql =~ s/^\s*\n|\s*$//g;
+    $query =~ s/^\s*\n|\s*$//g;
     $info = "-- " . scalar(localtime()) . "\n";
-    print {$opts{fh}} "$info$stack$query_sql\n";
+    print {$opts{fh}} "$info$stack$query\n";
     $log->{time1} = Time::HiRes::time();
     return $log;
 }
@@ -206,35 +209,35 @@ DBI::Log - Log all DBI queries
 
 =head1 DESCRIPTION
 
-You can use this module to log all queries that are made with DBI.
-You just need to include it in your script and it will work
-automatically.  By default, it will send output to STDERR, which
-is useful for command line scripts and for CGI scripts since STDERR
-will appear in the error log.
+You can use this module to log all queries that are made with DBI. You just need
+to include it in your script and it will work automatically. By default, it will
+send output to STDERR, which is useful for command line scripts and for CGI
+scripts since STDERR will appear in the error log.
 
 If you want to log elsewhere, set the file option to a different location.
 
     use DBI::Log file => "~/querylog.sql";
 
-Each query in the log is prepended with the date and the place in
-the code where it was run from. You can add a full stack trace by
-setting the trace option.
+Each query in the log is prepended with the date and the place in the code where
+it was run from. You can add a full stack trace by setting the trace option.
 
     use DBI::Log trace => 1;
 
-If you want timing information about how long the queries took to
-run add the timing option.
+If you want timing information about how long the queries took to run add the
+timing option.
 
     use DBI::Log timing => 1;
 
-If you want to exclude function calls from within a certain package appearing in the stack trace, you can use the exclude option like this:
+If you want to exclude function calls from within a certain package appearing in
+the stack trace, you can use the exclude option like this:
 
     use DBI::Log exclude => ["DBIx::Class"];
 
-It will exclude any package starting with that name, for example DBIx::Class::ResultSet DBI::Log is excluded by default.
+It will exclude any package starting with that name, for example
+DBIx::Class::ResultSet DBI::Log is excluded by default.
 
-The log is formatted as SQL, so if you look at it in an editor, it
-might be highlighted. This is what the output may look like:
+The log is formatted as SQL, so if you look at it in an editor, it might be
+highlighted. This is what the output may look like:
 
     -- Fri Sep 11 17:31:18 2015
     -- execute t/test.t 18
@@ -256,8 +259,8 @@ might be highlighted. This is what the output may look like:
 There is a built-in way to log with DBI, which can be enabled with
 DBI->trace(1), but the output is not easy to read through.
 
-This module integrates placeholder values into the query, so the
-log will contain valid queries.
+This module integrates placeholder values into the query, so the log will
+contain valid queries.
 
 =head1 METACPAN
 
@@ -281,8 +284,9 @@ David Precious
 
 Copyright (C) 2015 by Jacob Gelbman
 
-This library is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself, either Perl version 5.18.2 or,
-at your option, any later version of Perl 5 you may have available.
+This library is free software; you can redistribute it and/or modify it under
+the same terms as Perl itself, either Perl version 5.18.2 or, at your option,
+any later version of Perl 5 you may have available.
 
 =cut
+
