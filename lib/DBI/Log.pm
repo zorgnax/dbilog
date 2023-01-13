@@ -170,9 +170,11 @@ sub pre_query {
         my $i = 0;
         $query =~ s{\?}{$dbh->quote($args->[$i++])}eg;
     }
-    $query =~ s/^\s*\n|\s*$//g;
+
+    my $query_sql = ref $query eq 'DBI::st' ? $query->{Statement} : $query;
+    $query_sql =~ s/^\s*\n|\s*$//g;
     $info = "-- " . scalar(localtime()) . "\n";
-    print {$opts{fh}} "$info$stack$query\n";
+    print {$opts{fh}} "$info$stack$query_sql\n";
     $log->{time1} = Time::HiRes::time();
     return $log;
 }

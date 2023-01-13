@@ -17,6 +17,11 @@ my $sth = $dbh->prepare("CREATE TABLE foo (a INT, b INT)");
 $sth->execute();
 $dbh->do("INSERT INTO foo VALUES (?, ?)", undef, 1, 2);
 $dbh->selectcol_arrayref("SELECT * FROM foo");
+
+# gh#9 - ensure that we handle receiving statement handles and log them
+# appropriately too
+my $sth2 = $dbh->prepare("SELECT * FROM foo");
+$dbh->selectall_arrayref( $sth2, { Slice => {} } );
 eval {$dbh->do("INSERT INTO bar VALUES (?, ?)", undef, 1, 2)};
 
 my $output = `cat foo.sql`;
@@ -30,6 +35,10 @@ INSERT INTO foo VALUES \('1', '2'\)
 
 -- .*
 -- selectcol_arrayref .*
+SELECT \* FROM foo
+
+-- .*
+-- selectall_arrayref .*
 SELECT \* FROM foo
 
 -- .*
