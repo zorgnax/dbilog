@@ -6,7 +6,7 @@ no warnings;
 use DBI;
 use Time::HiRes;
 
-our $VERSION = "0.09";
+our $VERSION = "0.10";
 our %opts = (
     file => $file,
     trace => 0,
@@ -18,7 +18,7 @@ our %opts = (
 my $orig_execute = \&DBI::st::execute;
 *DBI::st::execute = sub {
     my ($sth, @args) = @_;
-    my $log = pre_query("execute", $sth->{Database}, $sth->{Statement}, \@args);
+    my $log = pre_query("execute", $sth->{Database}, $sth, $sth->{Statement}, \@args);
     my $retval = $orig_execute->($sth, @args);
     post_query($log);
     return $retval;
@@ -27,7 +27,7 @@ my $orig_execute = \&DBI::st::execute;
 my $orig_selectall_arrayref = \&DBI::db::selectall_arrayref;
 *DBI::db::selectall_arrayref = sub {
     my ($dbh, $query, $yup, @args) = @_;
-    my $log = pre_query("selectall_arrayref", $dbh, $query, \@args);
+    my $log = pre_query("selectall_arrayref", $dbh, undef, $query, \@args);
     my $retval = $orig_selectall_arrayref->($dbh, $query, $yup, @args);
     post_query($log);
     return $retval;
@@ -36,7 +36,7 @@ my $orig_selectall_arrayref = \&DBI::db::selectall_arrayref;
 my $orig_selectcol_arrayref = \&DBI::db::selectcol_arrayref;
 *DBI::db::selectcol_arrayref = sub {
     my ($dbh, $query, $yup, @args) = @_;
-    my $log = pre_query("selectcol_arrayref", $dbh, $query, \@args);
+    my $log = pre_query("selectcol_arrayref", $dbh, undef, $query, \@args);
     my $retval = $orig_selectcol_arrayref->($dbh, $query, $yup, @args);
     post_query($log);
     return $retval;
@@ -45,7 +45,7 @@ my $orig_selectcol_arrayref = \&DBI::db::selectcol_arrayref;
 my $orig_selectall_hashref = \&DBI::db::selectall_hashref;
 *DBI::db::selectall_hashref = sub {
     my ($dbh, $query, $yup, @args) = @_;
-    my $log = pre_query("selectall_hashref", $dbh, $query, \@args);
+    my $log = pre_query("selectall_hashref", $dbh, undef, $query, \@args);
     my $retval = $orig_selectall_hashref->($dbh, $query, $yup, @args);
     post_query($log);
     return $retval;
@@ -54,7 +54,7 @@ my $orig_selectall_hashref = \&DBI::db::selectall_hashref;
 my $orig_selectrow_arrayref = \&DBI::db::selectrow_arrayref;
 *DBI::db::selectrow_arrayref = sub {
     my ($dbh, $query, $yup, @args) = @_;
-    my $log = pre_query("selectrow_arrayref", $dbh, $query, \@args);
+    my $log = pre_query("selectrow_arrayref", $dbh, $sth, $query, \@args);
     my $retval = $orig_selectrow_arrayref->($dbh, $query, $yup, @args);
     post_query($log);
     return $retval;
@@ -63,7 +63,7 @@ my $orig_selectrow_arrayref = \&DBI::db::selectrow_arrayref;
 my $orig_selectrow_array = \&DBI::db::selectrow_array;
 *DBI::db::selectrow_array = sub {
     my ($dbh, $query, $yup, @args) = @_;
-    my $log = pre_query("selectrow_array", $dbh, $query, \@args);
+    my $log = pre_query("selectrow_array", $dbh, undef, $query, \@args);
     my $retval = $orig_selectrow_array->($dbh, $query, $yup, @args);
     post_query($log);
     return $retval;
@@ -72,7 +72,7 @@ my $orig_selectrow_array = \&DBI::db::selectrow_array;
 my $orig_selectrow_hashref = \&DBI::db::selectrow_hashref;
 *DBI::db::selectrow_hashref = sub {
     my ($dbh, $query, $yup, @args) = @_;
-    my $log = pre_query("selectrow_hashref", $dbh, $query, \@args);
+    my $log = pre_query("selectrow_hashref", $dbh, undef, $query, \@args);
     my $retval = $orig_selectrow_hashref->($dbh, $query, $yup, @args);
     post_query($log);
     return $retval;
@@ -81,7 +81,7 @@ my $orig_selectrow_hashref = \&DBI::db::selectrow_hashref;
 my $orig_do = \&DBI::db::do;
 *DBI::db::do = sub {
     my ($dbh, $query, $yup, @args) = @_;
-    my $log = pre_query("do", $dbh, $query, \@args);
+    my $log = pre_query("do", $dbh, undef, $query, \@args);
     my $retval = $orig_do->($dbh, $query, $yup, @args);
     post_query($log);
     return $retval;
@@ -107,7 +107,7 @@ sub import {
 }
 
 sub pre_query {
-    my ($name, $dbh, $query, $args) = @_;
+    my ($name, $dbh, $sth, $query, $args) = @_;
     my $log = {};
     my $mcount = 0;
 
@@ -167,12 +167,31 @@ sub pre_query {
     }
 
     if (ref($query) && ref($query) eq "DBI::st") {
+        $sth = $query;
         $query = $query->{Statement};
     }
 
     if ($dbh) {
-        my $i = 0;
-        $query =~ s{\?}{$dbh->quote($args->[$i++])}eg;
+        # When you use $sth->bind_param(1, "value") the params can be found in
+        # $sth->{ParamValues} and they override arguments sent in to
+        # $sth->execute()
+
+        my @args_copy = @$args;
+        my %values;
+        if ($sth && $sth->{ParamValues}) {
+            %values = %{$sth->{ParamValues}};
+        }
+        for my $key (keys %values) {
+            if (defined $key && $key =~ /^\d+$/) {
+                $args_copy[$key - 1] = $values{$key};
+            }
+        }
+
+        for my $i (0 .. @args_copy - 1) {
+            my $value = $args_copy[$i];
+            $value = $dbh->quote($value);
+            $query =~ s{\?}{$value}e;
+        }
     }
 
     $query =~ s/^\s*\n|\s*$//g;
