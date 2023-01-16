@@ -306,9 +306,15 @@ Jacob Gelbman, E<lt>gelbman@gmail.comE<gt>
 
 =head1 CONTRIBUTORS
 
-Árpád Szász, E<lt>arpad.szasz@plenum.roE<gt>
-Pavel Serikov
-David Precious
+=over
+
+=item * Árpád Szász, E<lt>arpad.szasz@plenum.roE<gt>
+
+=item * Pavel Serikov
+
+=item * David Precious (BIGPRESH) - E<lt>davidp@preshweb.co.ukE<gt>
+
+=back
 
 =head1 COPYRIGHT AND LICENSE
 
