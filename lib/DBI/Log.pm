@@ -163,7 +163,7 @@ sub pre_query {
         my ($package, $file, $line, $sub) = @$caller;
         my $short_sub = $sub;
         $short_sub =~ s/.*:://;
-        $short_sub = $name if $sub eq "DBI::Log::__ANON__";
+        $short_sub = $name if $sub =~ /^DBI::Log::__ANON__/;
         $stack .= "-- $short_sub $file $line\n";
     }
 
