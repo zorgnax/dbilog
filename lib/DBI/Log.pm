@@ -11,6 +11,7 @@ our %opts = (
     file => $file,
     trace => 0,
     timing => 0,
+    replace_placeholders => 1,
     fh => undef,
     exclude => undef,
 );
@@ -171,7 +172,7 @@ sub pre_query {
         $query = $query->{Statement};
     }
 
-    if ($dbh) {
+    if ($dbh && $opts{replace_placeholders}) {
         # When you use $sth->bind_param(1, "value") the params can be found in
         # $sth->{ParamValues} and they override arguments sent in to
         # $sth->execute()
@@ -279,7 +280,17 @@ There is a built-in way to log with DBI, which can be enabled with
 DBI->trace(1), but the output is not easy to read through.
 
 This module integrates placeholder values into the query, so the log will
-contain valid queries.
+contain valid queries; placeholder values set by C<bind_param()> on a prepared
+statement handle will take precedence over any passed to e.g. C<execute()>.
+
+Replacement of placeholders with their values can be disabled with the
+option `<replace_placeholders>`, e.g.:
+ 
+    use DBI::Log replace_placeholders => 0;
+
+This may be useful if you're doing later processing on the log, e.g. parsing
+it and grouping by queries, and want all executions of the same query to
+look alike without the values.
 
 =head1 METACPAN
 
@@ -295,9 +306,15 @@ Jacob Gelbman, E<lt>gelbman@gmail.comE<gt>
 
 =head1 CONTRIBUTORS
 
-Árpád Szász, E<lt>arpad.szasz@plenum.roE<gt>
-Pavel Serikov
-David Precious
+=over
+
+=item * Árpád Szász, E<lt>arpad.szasz@plenum.roE<gt>
+
+=item * Pavel Serikov
+
+=item * David Precious (BIGPRESH) - E<lt>davidp@preshweb.co.ukE<gt>
+
+=back
 
 =head1 COPYRIGHT AND LICENSE
 
