@@ -396,11 +396,6 @@ This is what the output may look like:
     -- (eval) t/test.t 27
     INSERT INTO bar VALUES ('1', '2')
 
-=item C<replace_placeholders>
-
-The default format, as illustrated above, is the SQL queries, with information
-added as SQL comments - so you can have a .sql file you could pass to your
-DB to re-run those queries, etc.
 
 JSON output is also available, enable it by setting the C<format> option
 to C<json> e.g.:
@@ -408,14 +403,13 @@ to C<json> e.g.:
     use DBI::Log format => "json";
 
 Query logs will then be emitted in "line-delimited JSON" format, where each
-record is a JSON object, separated by newlines - this format is useful
-if you want to post-process the information - for example, using jq to
-get only queries which took longer than a second:
+record is a JSON object, separated by newlines - this format is useful if you
+want to post-process the information - for example, using jq to get only queries
+which took longer than a second:
 
     jq 'select(.time_taken >= 1)' < querylog.json
 
-There is a built-in way to log with DBI, which can be enabled with
-DBI->trace(1), but the output is not easy to read through.
+=item C<replace_placeholders>
 
 By default, this module replaces placeholders in the query with the values
 - either provided in a call to execute() or bound beforehand - but this
@@ -429,20 +423,19 @@ look alike without the values.
 
 =back
 
-=head1 Why? / SEE ALSO
+=head1 SEE ALSO
 
 There is a built-in way to log with DBI, which can be enabled with
-C<DBI->trace(1)>, but the output is not particulary easy to read through
-nor does it give you much idea where the queries are run from.
+C<DBI->trace(1)>, but the output is not particulary easy to read through nor
+does it give you much idea where the queries are run from.
 
 L<DBIx::Class> provides facilities via the C<DBIC_TRACE> env var or setting
 C<$class->storage->debug(1);>, and even more powerful facilities by setting
-C<debugobj()>, but if you have a codebase which mixes DBIx::Class
-queries with direct DBI queries, you won't be capturing all queries.
+C<debugobj()>, but if you have a codebase which mixes DBIx::Class queries with
+direct DBI queries, you won't be capturing all queries.
 
-L<DBIx::Class::UnicornLogger>, L<DBIx::Class::Storage::Debug::PrettyTrace>
-and other similar options may be useful if you use DBIx::Class exclusively.
-
+L<DBIx::Class::UnicornLogger>, L<DBIx::Class::Storage::Debug::PrettyTrace> and
+other similar options may be useful if you use DBIx::Class exclusively.
 
 =head1 METACPAN
 
