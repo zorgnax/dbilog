@@ -14,6 +14,7 @@ our %opts = (
     replace_placeholders => 1,
     fh => undef,
     exclude => undef,
+    format => 'sql',
 );
 
 my $orig_execute = \&DBI::st::execute;
@@ -105,6 +106,12 @@ sub import {
         }
         open $opts{fh}, ">>", $file2 or die "Can't open $opts{file}: $!";
     }
+
+    # Load JSON, if we're asked for JSON output
+    if ($opts{format} eq 'json') {
+        eval "require JSON;"
+            or die "Can't produce JSON output without JSON CPAN module!";
+    } 
 }
 
 sub pre_query {
@@ -158,13 +165,17 @@ sub pre_query {
         @filtered_callers = ($filtered_callers[-1]);
     }
 
-    my $stack = "";
+    my @stack;
     for my $caller (@filtered_callers) {
         my ($package, $file, $line, $sub) = @$caller;
         my $short_sub = $sub;
         $short_sub =~ s/.*:://;
         $short_sub = $name if $sub =~ /^DBI::Log::__ANON__/;
-        $stack .= "-- $short_sub $file $line\n";
+        push @stack, {
+            sub => $short_sub,
+            file => $file,
+            line => $line,
+        };
     }
 
     if (ref($query) && ref($query) eq "DBI::st") {
@@ -196,9 +207,20 @@ sub pre_query {
     }
 
     $query =~ s/^\s*\n|\s*$//g;
-    $info = "-- " . scalar(localtime()) . "\n";
-    print {$opts{fh}} "$info$stack$query\n";
-    $log->{time1} = Time::HiRes::time();
+    $log->{time_started} = Time::HiRes::time();
+    if ($opts{format} eq 'sql') {
+        $info = "-- " . scalar(localtime()) . "\n";
+        my $stack_txt = join "", map { 
+            "-- $_->{sub} $_->{file} $_->{line}\n" 
+        } @stack;
+        print {$opts{fh}} "$info$stack_txt$query\n";
+    } else {
+        # For JSON output we don't want to output anything yet,
+        # so post_query() can emit the whole JSON object, just remember
+        # them
+        $log->{query} = $query;
+        $log->{stack} = \@stack;
+    }
     return $log;
 }
 
@@ -206,11 +228,24 @@ sub post_query {
     my ($log) = @_;
     return if $log->{skip};
     if ($opts{timing}) {
-        $log->{time2} = Time::HiRes::time();
-        my $diff = sprintf '%.3f', $log->{time2} - $log->{time1};
-        print {$opts{fh}} "-- ${diff}s\n";
+        $log->{time_ended} = Time::HiRes::time();
+        $log->{time_taken} = sprintf '%.3f', 
+            $log->{time_ended} - $log->{time_started};
     }
-    print {$opts{fh}} "\n";
+   
+    if ($opts{format} eq 'sql') {
+        # For SQL output format, pre_query already printed most of
+        # the info, we just need to add the time taken - and that only
+        # if we're doing timings...
+        if ($opts{timing}) {
+            print {$opts{fh}} "-- $log->{time_taken}s\n";
+        }
+        print {$opts{fh}} "\n";
+    } elsif ($opts{format} eq 'json') {
+        # print all the info as JSON
+        print {$opts{fh}} JSON::to_json($log) . "\n";
+    }
+
 }
 
 1;
@@ -315,12 +350,26 @@ This is what the output may look like:
     -- (eval) t/test.t 27
     INSERT INTO bar VALUES ('1', '2')
 
-You can instead set C<format> to C<json> if you want JSON-format output -
-this will then return L<newline-delimited JSON|https://jsonlines.org/>
-output - which you can process with L<jq|https://stedolan.github.io/jq/>
-or C<logstash> or various other tools more easily than the SQL text format.
-
 =item C<replace_placeholders>
+
+The default format, as illustrated above, is the SQL queries, with information
+added as SQL comments - so you can have a .sql file you could pass to your
+DB to re-run those queries, etc.
+
+JSON output is also available, enable it by setting the C<format> option
+to C<json> e.g.:
+
+    use DBI::Log format => "json";
+
+Query logs will then be emitted in "line-delimited JSON" format, where each
+record is a JSON object, separated by newlines - this format is useful
+if you want to post-process the information - for example, using jq to
+get only queries which took longer than a second:
+
+    jq 'select(.time_taken >= 1)' < querylog.json
+
+There is a built-in way to log with DBI, which can be enabled with
+DBI->trace(1), but the output is not easy to read through.
 
 By default, this module replaces placeholders in the query with the values
 - either provided in a call to execute() or bound beforehand - but this
