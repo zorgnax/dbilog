@@ -227,37 +227,76 @@ DBI::Log - Log all DBI queries
 
     use DBI::Log;
 
+or
+
+    perl -MDBI::Log path/to/script.pl
+
 =head1 DESCRIPTION
 
-You can use this module to log all queries that are made with DBI. You just need
-to include it in your script and it will work automatically. By default, it will
-send output to STDERR, which is useful for command line scripts and for CGI
-scripts since STDERR will appear in the error log.
+You can use this module to log all queries that are made with DBI. You can
+include it in your script with `use DBI::Log` or use the C<-M> option for
+C<perl> to avoid changing your code at all.
 
-If you want to log elsewhere, set the file option to a different location.
+By default, it will send output to C<STDERR>, which is useful for command line 
+scripts and for CGI scripts since STDERR will appear in the error log.
+
+You can control where output goes, and various other behaviour, by setting
+the options documented below.
+
+=head1 OPTIONS
+
+Options can be set on the C<use DBI::Log>` line when loading the module:
+
+    use DBI::Log timing => 1, file => "/tmp/querylog.sql";
+
+or passed to C<-M> e.g.:
+
+    perl -M'DBI::Log timing => 1' path/to/script.pl
+
+The following options are available:
+
+=over 4
+
+=item C<file>
+
+Set the C<file> option to send query logs to the named file instead of STDERR.
 
     use DBI::Log file => "~/querylog.sql";
 
 Each query in the log is prepended with the date and the place in the code where
 it was run from. You can add a full stack trace by setting the trace option.
 
+=item C<trace>
+
+Include a stack trace with each query, so you can see where the code which
+performed the query was called from:
+
     use DBI::Log trace => 1;
 
+=item C<timing>
+
 If you want timing information about how long the queries took to run add the
-timing option.
+C<timing> option.
 
     use DBI::Log timing => 1;
 
-If you want to exclude function calls from within a certain package appearing in
-the stack trace, you can use the exclude option like this:
+=item C<exclude>
+
+If you want to exclude function calls from within certain package(s) appearing 
+in the stack trace from C<trace>, you can use the exclude option like this:
 
     use DBI::Log exclude => ["DBIx::Class"];
 
 It will exclude any package starting with that name, for example
-DBIx::Class::ResultSet DBI::Log is excluded by default.
+C<DBIx::Class::ResultSet> and C<DBI::Log> are excluded by default.
 
-The log is formatted as SQL, so if you look at it in an editor, it might be
-highlighted. This is what the output may look like:
+=item C<format>
+
+By default the log is formatted as SQL, so if you look at it in an editor, 
+it might be syntax highlighted. Additional information about the query
+is added as SQL comments.
+
+This is what the output may look like:
 
     -- Fri Sep 11 17:31:18 2015
     -- execute t/test.t 18
@@ -276,21 +315,39 @@ highlighted. This is what the output may look like:
     -- (eval) t/test.t 27
     INSERT INTO bar VALUES ('1', '2')
 
-There is a built-in way to log with DBI, which can be enabled with
-DBI->trace(1), but the output is not easy to read through.
+You can instead set C<format> to C<json> if you want JSON-format output -
+this will then return L<newline-delimited JSON|https://jsonlines.org/>
+output - which you can process with L<jq|https://stedolan.github.io/jq/>
+or C<logstash> or various other tools more easily than the SQL text format.
 
-This module integrates placeholder values into the query, so the log will
-contain valid queries; placeholder values set by C<bind_param()> on a prepared
-statement handle will take precedence over any passed to e.g. C<execute()>.
+=item C<replace_placeholders>
 
-Replacement of placeholders with their values can be disabled with the
-option `<replace_placeholders>`, e.g.:
- 
+By default, this module replaces placeholders in the query with the values
+- either provided in a call to execute() or bound beforehand - but this
+behaviour can be disabled by setting C<replace_placeholders> to false:
+
     use DBI::Log replace_placeholders => 0;
 
 This may be useful if you're doing later processing on the log, e.g. parsing
 it and grouping by queries, and want all executions of the same query to
 look alike without the values.
+
+=back
+
+=head1 Why? / SEE ALSO
+
+There is a built-in way to log with DBI, which can be enabled with
+C<DBI->trace(1)>, but the output is not particulary easy to read through
+nor does it give you much idea where the queries are run from.
+
+L<DBIx::Class> provides facilities via the C<DBIC_TRACE> env var or setting 
+C<$class->storage->debug(1);>, and even more powerful facilities by setting
+C<debugobj()>, but if you have a codebase which mixes DBIx::Class
+queries with direct DBI queries, you won't be capturing all queries.
+
+L<DBIx::Class::UnicornLogger>, L<DBIx::Class::Storage::Debug::PrettyTrace>
+and other similar options may be useful if you use DBIx::Class exclusively.
+
 
 =head1 METACPAN
 
