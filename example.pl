@@ -22,11 +22,15 @@ $dbh->do("INSERT INTO foo VALUES (?, ?)", undef, 5, 6);
 $dbh->selectcol_arrayref("SELECT * FROM foo");
 #eval {$dbh->do("INSERT INTO bar VALUES (?, ?)", undef, 1, 2)};
 
-$sth = $dbh->prepare("SELECT * FROM foo WHERE a=?");
-$sth->bind_param(1, 3);
-$sth->execute();
+foo();
 
-while (my $row = $sth->fetchrow_hashref()) {
-    print Dumper($row);
+sub foo {
+    $sth = $dbh->prepare("SELECT * FROM foo WHERE a=?");
+    $sth->bind_param(1, 3);
+    $sth->execute();
+
+    while (my $row = $sth->fetchrow_hashref()) {
+        print Dumper($row);
+    }
 }
 

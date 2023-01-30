@@ -57,26 +57,14 @@ INSERT INTO bar VALUES \('1', '2'\)
 });
 
 
-# Now, test JSON output - only if JSON.pm is available
-SKIP: {
-    skip "Need JSON.pm to test JSON output", 2 unless eval "require JSON";
+# Manual re-import to change settings
+DBI::Log->import(file => $json_file, format => "json");
 
-    # Manual re-import to change settings
-    DBI::Log->import(file => $json_file, format => "json");
-    #   Failed test 'JSON log logged the query'
+my $query = "INSERT INTO foo VALUES (3, 4)";
+$dbh->do($query);
 
-    my $json_test_query = "INSERT INTO foo VALUES (3, 4)";
-    $dbh->do($json_test_query);
-
-    my $hopefully_json = `cat $json_file`; # todo - slurp instead of shelling out
-    my $json;
-    eval { $json = JSON::decode_json($hopefully_json); };
-    ok($json, "Decoded JSON log to something truthy");
-    is ($json->{query}, $json_test_query, "JSON log logged the query");
-    diag "JSON: ", $hopefully_json;
-}
-
-
+my $output = `cat $json_file`;
+like $output, qr/^\{"query": "INSERT INTO foo VALUES \(3, 4\)"/, "JSON format";
 
 done_testing();
 

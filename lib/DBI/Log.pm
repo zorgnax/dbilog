@@ -14,7 +14,7 @@ our %opts = (
     replace_placeholders => 1,
     fh => undef,
     exclude => undef,
-    format => 'sql',
+    format => "sql",
 );
 
 my $orig_execute = \&DBI::st::execute;
@@ -104,14 +104,8 @@ sub import {
             my $home = $ENV{HOME} || (getpwuid($<))[7];
             $file2 =~ s{^~/}{$home/};
         }
-        open $opts{fh}, ">>", $file2 or die "Can't open $opts{file}: $!";
+        open $opts{fh}, ">>", $file2 or die "Can't open $opts{file}: $!\n";
     }
-
-    # Load JSON, if we're asked for JSON output
-    if ($opts{format} eq 'json') {
-        eval "require JSON;"
-            or die "Can't produce JSON output without JSON CPAN module!";
-    } 
 }
 
 sub pre_query {
@@ -147,7 +141,7 @@ sub pre_query {
     # stop there.
     my @filtered_callers;
     CALLER: for my $caller (reverse @callers) {
-        my ($package, $file, $line, $sub) = @$caller;
+        my ($package, $file, $line, $long_sub) = @$caller;
         if ($package eq "DBI::Log") {
             last CALLER;
         }
@@ -167,12 +161,12 @@ sub pre_query {
 
     my @stack;
     for my $caller (@filtered_callers) {
-        my ($package, $file, $line, $sub) = @$caller;
-        my $short_sub = $sub;
-        $short_sub =~ s/.*:://;
-        $short_sub = $name if $sub =~ /^DBI::Log::__ANON__/;
+        my ($package, $file, $line, $long_sub) = @$caller;
+        my $sub = $long_sub;
+        $sub =~ s/.*:://;
+        $sub = $name if $long_sub =~ /^DBI::Log::__ANON__/;
         push @stack, {
-            sub => $short_sub,
+            sub => $sub,
             file => $file,
             line => $line,
         };
@@ -208,44 +202,96 @@ sub pre_query {
 
     $query =~ s/^\s*\n|\s*$//g;
     $log->{time_started} = Time::HiRes::time();
-    if ($opts{format} eq 'sql') {
-        $info = "-- " . scalar(localtime()) . "\n";
-        my $stack_txt = join "", map { 
-            "-- $_->{sub} $_->{file} $_->{line}\n" 
-        } @stack;
-        print {$opts{fh}} "$info$stack_txt$query\n";
-    } else {
-        # For JSON output we don't want to output anything yet,
-        # so post_query() can emit the whole JSON object, just remember
-        # them
-        $log->{query} = $query;
-        $log->{stack} = \@stack;
+    $log->{query} = $query;
+    $log->{stack} = \@stack;
+    if ($opts{format} eq "json") {
+        # For JSON output we don't want to output anything yet, so post_query()
+        # can emit the whole JSON object, just remember them.
     }
+    else {
+        my $mesg;
+        $mesg .= "-- " . scalar(localtime()) . "\n";
+        for my $caller (@stack) {
+            $mesg .= "-- $caller->{sub} $caller->{file} $caller->{line}\n";
+        }
+        $mesg .= "$query\n";
+        print {$opts{fh}} $mesg;
+    }
+
     return $log;
 }
 
 sub post_query {
     my ($log) = @_;
     return if $log->{skip};
-    if ($opts{timing}) {
-        $log->{time_ended} = Time::HiRes::time();
-        $log->{time_taken} = sprintf '%.3f', 
-            $log->{time_ended} - $log->{time_started};
+    $log->{time_ended} = Time::HiRes::time();
+    $log->{time_taken} = sprintf "%.3f", $log->{time_ended} - $log->{time_started};
+
+    if ($opts{format} eq "json") {
+        # print all the info as JSON
+        print {$opts{fh}} to_json($log) . "\n";
     }
-   
-    if ($opts{format} eq 'sql') {
-        # For SQL output format, pre_query already printed most of
-        # the info, we just need to add the time taken - and that only
-        # if we're doing timings...
+    else {
+        # For SQL output format, pre_query already printed most of the info, we
+        # just need to add the time taken - and that only if we're doing
+        # timings...
         if ($opts{timing}) {
             print {$opts{fh}} "-- $log->{time_taken}s\n";
         }
         print {$opts{fh}} "\n";
-    } elsif ($opts{format} eq 'json') {
-        # print all the info as JSON
-        print {$opts{fh}} JSON::to_json($log) . "\n";
+    }
+}
+
+sub to_json {
+    my ($val, $depth) = @_;
+    $depth ||= 0;
+    my $pretty = 0;
+
+    my $out;
+    if (!defined $val) {
+        $out = "null";
+    }
+    elsif (ref $val eq "HASH") {
+        $out = "{";
+        $out .= "\n" if $pretty;
+        my $i = 0;
+        for my $key (sort keys %$val) {
+            my $val2 = $val->{$key};
+            if ($i) {
+                $out .= $pretty ? ",\n" : ", ";
+            }
+            $out .= "    " x ($depth + 1) if $pretty;
+            $out .= "\"$key\": " . to_json($val2, $depth + 1);
+            $i++;
+        }
+        $out .= "\n" if $pretty;
+        $out .= "    " x ($depth) if $pretty;
+        $out .= "}";
+    }
+    elsif (ref $val eq "ARRAY") {
+        $out = "[";
+        $out .= "\n" if $pretty;
+        for my $i (0 .. @$val - 1) {
+            my $val2 = $val->[$i];
+            if ($i) {
+                $out .= $pretty ? ",\n" : ", ";
+            }
+            $out .= "    " x ($depth + 1) if $pretty;
+            $out .= to_json($val2, $depth + 1);
+        }
+        $out .= "\n" if $pretty;
+        $out .= "    " x ($depth) if $pretty;
+        $out .= "]";
+    }
+    elsif ($val =~ /^(-?\d+(\.\d*)?(e[+-]?\d+)?)$/i) {
+        $out = $val;
+    }
+    else {
+        $val =~ s/"/\"/g;
+        $out = "\"$val\"";
     }
 
+    return $out;
 }
 
 1;
@@ -272,7 +318,7 @@ You can use this module to log all queries that are made with DBI. You can
 include it in your script with `use DBI::Log` or use the C<-M> option for
 C<perl> to avoid changing your code at all.
 
-By default, it will send output to C<STDERR>, which is useful for command line 
+By default, it will send output to C<STDERR>, which is useful for command line
 scripts and for CGI scripts since STDERR will appear in the error log.
 
 You can control where output goes, and various other behaviour, by setting
@@ -317,7 +363,7 @@ C<timing> option.
 
 =item C<exclude>
 
-If you want to exclude function calls from within certain package(s) appearing 
+If you want to exclude function calls from within certain package(s) appearing
 in the stack trace from C<trace>, you can use the exclude option like this:
 
     use DBI::Log exclude => ["DBIx::Class"];
@@ -327,7 +373,7 @@ C<DBIx::Class::ResultSet> and C<DBI::Log> are excluded by default.
 
 =item C<format>
 
-By default the log is formatted as SQL, so if you look at it in an editor, 
+By default the log is formatted as SQL, so if you look at it in an editor,
 it might be syntax highlighted. Additional information about the query
 is added as SQL comments.
 
@@ -389,7 +435,7 @@ There is a built-in way to log with DBI, which can be enabled with
 C<DBI->trace(1)>, but the output is not particulary easy to read through
 nor does it give you much idea where the queries are run from.
 
-L<DBIx::Class> provides facilities via the C<DBIC_TRACE> env var or setting 
+L<DBIx::Class> provides facilities via the C<DBIC_TRACE> env var or setting
 C<$class->storage->debug(1);>, and even more powerful facilities by setting
 C<debugobj()>, but if you have a codebase which mixes DBIx::Class
 queries with direct DBI queries, you won't be capturing all queries.
