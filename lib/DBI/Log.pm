@@ -6,7 +6,7 @@ no warnings;
 use DBI;
 use Time::HiRes;
 
-our $VERSION = "0.10";
+our $VERSION = "0.11";
 our %opts = (
     file => $file,
     trace => 0,
