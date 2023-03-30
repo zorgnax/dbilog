@@ -4,6 +4,7 @@ use 5.006;
 no strict;
 no warnings;
 use DBI;
+use IO::Handle;
 use Time::HiRes;
 
 our $VERSION = "0.11";
@@ -105,6 +106,9 @@ sub import {
             $file2 =~ s{^~/}{$home/};
         }
         open $opts{fh}, ">>", $file2 or die "Can't open $opts{file}: $!\n";
+        # autoflush so that tailing to watch queries being performed works
+        # as you'd expect
+        $opts{fh}->autoflush(1);
     }
 }
 
