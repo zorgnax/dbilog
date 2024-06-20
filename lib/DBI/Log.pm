@@ -291,7 +291,11 @@ sub to_json {
         $out = $val;
     }
     else {
-        $val =~ s/"/\"/g;
+        # Make the value suitable to use in a JSON string - no newlines, escape
+        # # control characters and double quotes.
+        $val =~ s/"/\\"/g;
+        $val =~ s/\n/ /g;
+        $val =~ s/([\x00-\x1F])/sprintf("\\u%04x", ord($1))/eg;
         $out = "\"$val\"";
     }
 
