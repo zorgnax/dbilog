@@ -7,7 +7,7 @@ use DBI;
 use IO::Handle;
 use Time::HiRes;
 
-our $VERSION = "0.11";
+our $VERSION = "0.12";
 our %opts = (
     file => $file,
     trace => 0,
@@ -292,7 +292,7 @@ sub to_json {
     }
     else {
         # Make the value suitable to use in a JSON string - no newlines, escape
-        # # control characters and double quotes.
+        # control characters and double quotes.
         $val =~ s/"/\\"/g;
         $val =~ s/\n/ /g;
         $val =~ s/([\x00-\x1F])/sprintf("\\u%04x", ord($1))/eg;
