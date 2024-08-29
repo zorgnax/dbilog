@@ -20,7 +20,13 @@ $dbh->do("INSERT INTO foo VALUES (?, ?)", undef, 1, 2);
 $dbh->do("INSERT INTO foo VALUES (?, ?)", undef, 3, 4);
 $dbh->do("INSERT INTO foo VALUES (?, ?)", undef, 5, 6);
 $dbh->selectcol_arrayref("SELECT * FROM foo");
-#eval {$dbh->do("INSERT INTO bar VALUES (?, ?)", undef, 1, 2)};
+
+# There is a bug where if a query dies it doesn't print the timing or the ending
+# newline
+eval {$dbh->do("INSERT INTO bar VALUES (?, ?)", undef, 1, 2)};
+print "\n";
+
+$dbh->selectall_hashref("SELECT * FROM foo", "a");
 
 foo();
 
