@@ -47,9 +47,9 @@ my $orig_selectcol_arrayref = \&DBI::db::selectcol_arrayref;
 
 my $orig_selectall_hashref = \&DBI::db::selectall_hashref;
 *DBI::db::selectall_hashref = sub {
-    my ($dbh, $query, $yup, @args) = @_;
+    my ($dbh, $query, $key, $yup, @args) = @_;
     my $log = pre_query("selectall_hashref", $dbh, undef, $query, \@args);
-    my $retval = $orig_selectall_hashref->($dbh, $query, $yup, @args);
+    my $retval = $orig_selectall_hashref->($dbh, $query, $key, $yup, @args);
     post_query($log);
     return $retval;
 };
