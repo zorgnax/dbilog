@@ -53,7 +53,8 @@ if ($mm_ver > 6.45) {
                 type => "git",
                 web => "https://github.com/zorgnax/dbilog",
                 url => "https://github.com/zorgnax/dbilog.git",
-            }
+            },
+            bugtracker => { web => "https://github.com/zorgnax/dbilog/issues" },
         }
     };
 }
