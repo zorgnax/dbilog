@@ -1,7 +1,7 @@
 package DBI::Log;
 
 use 5.006;
-no strict;
+use strict;
 use warnings;
 use DBI;
 use IO::Handle;
