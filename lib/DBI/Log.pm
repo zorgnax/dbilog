@@ -2,10 +2,12 @@ package DBI::Log;
 
 use 5.006;
 no strict;
-no warnings;
+use warnings;
 use DBI;
 use IO::Handle;
 use Time::HiRes;
+
+no warnings 'redefine';
 
 our $VERSION = "0.12";
 our %opts = (
