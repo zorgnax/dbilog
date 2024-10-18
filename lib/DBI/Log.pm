@@ -11,7 +11,7 @@ no warnings 'redefine';
 
 our $VERSION = "0.12";
 our %opts = (
-    file => $file,
+    file => undef,
     trace => 0,
     timing => 0,
     replace_placeholders => 1,
@@ -59,7 +59,7 @@ my $orig_selectall_hashref = \&DBI::db::selectall_hashref;
 my $orig_selectrow_arrayref = \&DBI::db::selectrow_arrayref;
 *DBI::db::selectrow_arrayref = sub {
     my ($dbh, $query, $yup, @args) = @_;
-    my $log = pre_query("selectrow_arrayref", $dbh, $sth, $query, \@args);
+    my $log = pre_query("selectrow_arrayref", $dbh, undef, $query, \@args);
     my $retval = $orig_selectrow_arrayref->($dbh, $query, $yup, @args);
     post_query($log);
     return $retval;
