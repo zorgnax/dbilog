@@ -16,6 +16,8 @@ END {
     unlink $json_file;
 };
 
+is(DBI::Log::is_installed(), 1, 'DBI::Log::is_installed is true');
+
 my $dbh = DBI->connect("dbi:SQLite:dbname=$db_file", "", "", {RaiseError => 1, PrintError => 0});
 
 my $sth = $dbh->prepare("CREATE TABLE foo (a INT, b INT)");
@@ -65,6 +67,17 @@ $dbh->do($query);
 
 my $output = `cat $json_file`;
 like $output, qr/^\{"query": "INSERT INTO foo VALUES \(3, 4\)"/, "JSON format";
+
+
+DBI::Log::uninstall();
+
+is(DBI::Log::is_installed(), 0, 'after uninstall DBI::Log::is_installed now false');
+
+$query = 'INSERT INTO foo VALUES (13, 31)';
+$dbh->do($query);
+$output = `cat $json_file`;
+unlike $output, qr/13, 31/, "and logging stopped";
+
 
 done_testing();
 
