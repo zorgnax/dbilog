@@ -454,6 +454,31 @@ look alike without the values.
 
 =back
 
+=head1 FUNCTIONS
+
+No functions are exported, nor are they needed in default operational mode.
+
+=over 4
+
+=item C<uninstall>
+
+The C<DBI::Log> module works by wrapping DBI's core functions C<do>, C<execute>,
+C<selectall_arrayref>, C<selectrow_hashref>, et al., with code that 
+inspects/copies the parameters and writes log messages using them.
+
+The C<uninstall> function removes the wrappers to DBI's core functions, 
+restoring the original code to the original symbols.  Naturally, this
+stops the logging.  
+
+You can use the C<install> function to re-enable the logging later.
+
+=item C<is_installed>
+
+This function returns true if the DBI functions are wrapped (logging is 
+enabled), false otherwise.
+
+=back
+
 =head1 SEE ALSO
 
 There is a built-in way to log with DBI, which can be enabled with
