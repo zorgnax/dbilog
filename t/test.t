@@ -18,11 +18,11 @@ END {
 
 my $dbh = DBI->connect("dbi:SQLite:dbname=$db_file", "", "", {RaiseError => 1, PrintError => 0});
 
-my $sth = $dbh->prepare("CREATE TABLE foo (a INT, b INT)");
+my $sth = $dbh->prepare("CREATE TABLE foo (a INT UNIQUE, b INT)");
 $sth->execute();
 check("prepare execute", qr{^-- .*
 -- execute .*
-CREATE TABLE foo \(a INT, b INT\)
+CREATE TABLE foo \(a INT UNIQUE, b INT\)
 
 });
 
@@ -57,10 +57,20 @@ check("placeholders on execute", qr{^-- .*
 INSERT INTO foo VALUES \('2', '4'\)
 });
 
+# make sure exceptions get logged (text output)
 eval {$dbh->do("INSERT INTO bar VALUES (?, ?)", undef, 1, 2)};
-check("do dies still logs", qr{^-- .*
+like($@, qr/no such table: bar/, 'got expected do exception');
+check("do exception still logs", qr{^-- .*
 -- do .*
 INSERT INTO bar VALUES \('1', '2'\)
+});
+
+$sth = $dbh->prepare("INSERT INTO foo VALUES (?, ?)");
+eval { $sth->execute(1, 7) };
+like($@, qr/UNIQUE constraint failed/, 'got expected execute exception');
+check("execute exception still logs with placeholders", qr{^-- .*
+-- execute .*
+INSERT INTO foo VALUES \('1', '7'\)
 });
 
 
