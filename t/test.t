@@ -50,6 +50,13 @@ SELECT \* FROM foo
 
 });
 
+$sth = $dbh->prepare("INSERT INTO foo VALUES (?, ?)");
+$sth->execute(2, 4);
+check("placeholders on execute", qr{^-- .*
+-- execute .*
+INSERT INTO foo VALUES \('2', '4'\)
+});
+
 eval {$dbh->do("INSERT INTO bar VALUES (?, ?)", undef, 1, 2)};
 check("do dies still logs", qr{^-- .*
 -- do .*
