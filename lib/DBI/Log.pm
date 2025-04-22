@@ -415,20 +415,20 @@ This is what the output may look like:
 
     -- Fri Sep 11 17:31:18 2015
     -- execute t/test.t 18
-    CREATE TABLE foo (a INT, b INT)
+    CREATE TABLE foo (a INT, b INT);
 
     -- Fri Sep 11 17:31:18 2015
     -- do t/test.t 21
-    INSERT INTO foo VALUES ('1', '2')
+    INSERT INTO foo VALUES ('1', '2');
 
     -- Fri Sep 11 17:31:18 2015
     -- selectcol_arrayref t/test.t 24
-    SELECT * FROM foo
+    SELECT * FROM foo;
 
     -- Fri Sep 11 17:31:18 2015
     -- do t/test.t 27
     -- (eval) t/test.t 27
-    INSERT INTO bar VALUES ('1', '2')
+    INSERT INTO bar VALUES ('1', '2');
 
 
 JSON output is also available, enable it by setting the C<format> option
