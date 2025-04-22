@@ -7,8 +7,6 @@ use DBI;
 use IO::Handle;
 use Time::HiRes;
 
-no warnings 'redefine';
-
 our $VERSION = "0.12";
 our %opts = (
     file => undef,
@@ -20,78 +18,99 @@ our %opts = (
     format => "sql",
 );
 
-my $orig_execute = \&DBI::st::execute;
-*DBI::st::execute = sub {
-    my ($sth, @args) = @_;
-    my $log = pre_query("execute", $sth->{Database}, $sth, $sth->{Statement}, \@args);
-    my $retval = $orig_execute->($sth, @args);
-    post_query($log);
-    return $retval;
-};
+my %orig;
 
-my $orig_selectall_arrayref = \&DBI::db::selectall_arrayref;
-*DBI::db::selectall_arrayref = sub {
-    my ($dbh, $query, $yup, @args) = @_;
-    my $log = pre_query("selectall_arrayref", $dbh, undef, $query, \@args);
-    my $retval = $orig_selectall_arrayref->($dbh, $query, $yup, @args);
-    post_query($log);
-    return $retval;
-};
+sub is_installed {
+    return keys %orig ? 1 : 0;
+}
 
-my $orig_selectcol_arrayref = \&DBI::db::selectcol_arrayref;
-*DBI::db::selectcol_arrayref = sub {
-    my ($dbh, $query, $yup, @args) = @_;
-    my $log = pre_query("selectcol_arrayref", $dbh, undef, $query, \@args);
-    my $retval = $orig_selectcol_arrayref->($dbh, $query, $yup, @args);
-    post_query($log);
-    return $retval;
-};
+sub install {
+    return if is_installed();
+    $orig{execute} = \&DBI::st::execute;
+    $orig{selectall_arrayref} = \&DBI::db::selectall_arrayref;
+    $orig{selectcol_arrayref} = \&DBI::db::selectcol_arrayref;
+    $orig{selectall_hashref} = \&DBI::db::selectall_hashref;
+    $orig{selectrow_arrayref} = \&DBI::db::selectrow_arrayref;
+    $orig{selectrow_array} = \&DBI::db::selectrow_array;
+    $orig{selectrow_hashref} = \&DBI::db::selectrow_hashref;
+    $orig{do} = \&DBI::db::do;
 
-my $orig_selectall_hashref = \&DBI::db::selectall_hashref;
-*DBI::db::selectall_hashref = sub {
-    my ($dbh, $query, $key, $yup, @args) = @_;
-    my $log = pre_query("selectall_hashref", $dbh, undef, $query, \@args);
-    my $retval = $orig_selectall_hashref->($dbh, $query, $key, $yup, @args);
-    post_query($log);
-    return $retval;
-};
+    no warnings 'redefine';
 
-my $orig_selectrow_arrayref = \&DBI::db::selectrow_arrayref;
-*DBI::db::selectrow_arrayref = sub {
-    my ($dbh, $query, $yup, @args) = @_;
-    my $log = pre_query("selectrow_arrayref", $dbh, undef, $query, \@args);
-    my $retval = $orig_selectrow_arrayref->($dbh, $query, $yup, @args);
-    post_query($log);
-    return $retval;
-};
+    *DBI::st::execute = sub {
+        my ($sth, @args) = @_;
+        my $log = pre_query("execute", $sth->{Database}, $sth, $sth->{Statement}, \@args);
+        my $retval = $orig{execute}->($sth, @args);
+        post_query($log);
+        return $retval;
+    };
 
-my $orig_selectrow_array = \&DBI::db::selectrow_array;
-*DBI::db::selectrow_array = sub {
-    my ($dbh, $query, $yup, @args) = @_;
-    my $log = pre_query("selectrow_array", $dbh, undef, $query, \@args);
-    my $retval = $orig_selectrow_array->($dbh, $query, $yup, @args);
-    post_query($log);
-    return $retval;
-};
+    *DBI::db::selectall_arrayref = sub {
+        my ($dbh, $query, $yup, @args) = @_;
+        my $log = pre_query("selectall_arrayref", $dbh, undef, $query, \@args);
+        my $retval = $orig{selectall_arrayref}->($dbh, $query, $yup, @args);
+        post_query($log);
+        return $retval;
+    };
 
-my $orig_selectrow_hashref = \&DBI::db::selectrow_hashref;
-*DBI::db::selectrow_hashref = sub {
-    my ($dbh, $query, $yup, @args) = @_;
-    my $log = pre_query("selectrow_hashref", $dbh, undef, $query, \@args);
-    my $retval = $orig_selectrow_hashref->($dbh, $query, $yup, @args);
-    post_query($log);
-    return $retval;
-};
+    *DBI::db::selectcol_arrayref = sub {
+        my ($dbh, $query, $yup, @args) = @_;
+        my $log = pre_query("selectcol_arrayref", $dbh, undef, $query, \@args);
+        my $retval = $orig{selectcol_arrayref}->($dbh, $query, $yup, @args);
+        post_query($log);
+        return $retval;
+    };
 
-my $orig_do = \&DBI::db::do;
-*DBI::db::do = sub {
-    my ($dbh, $query, $yup, @args) = @_;
-    my $log = pre_query("do", $dbh, undef, $query, \@args);
-    my $retval = $orig_do->($dbh, $query, $yup, @args);
-    post_query($log);
-    return $retval;
-};
+    *DBI::db::selectall_hashref = sub {
+        my ($dbh, $query, $key, $yup, @args) = @_;
+        my $log = pre_query("selectall_hashref", $dbh, undef, $query, \@args);
+        my $retval = $orig{selectall_hashref}->($dbh, $query, $key, $yup, @args);
+        post_query($log);
+        return $retval;
+    };
 
+    *DBI::db::selectrow_arrayref = sub {
+        my ($dbh, $query, $yup, @args) = @_;
+        my $log = pre_query("selectrow_arrayref", $dbh, undef, $query, \@args);
+        my $retval = $orig{selectrow_arrayref}->($dbh, $query, $yup, @args);
+        post_query($log);
+        return $retval;
+    };
+
+    *DBI::db::selectrow_array = sub {
+        my ($dbh, $query, $yup, @args) = @_;
+        my $log = pre_query("selectrow_array", $dbh, undef, $query, \@args);
+        my $retval = $orig{selectrow_array}->($dbh, $query, $yup, @args);
+        post_query($log);
+        return $retval;
+    };
+
+    *DBI::db::selectrow_hashref = sub {
+        my ($dbh, $query, $yup, @args) = @_;
+        my $log = pre_query("selectrow_hashref", $dbh, undef, $query, \@args);
+        my $retval = $orig{selectrow_hashref}->($dbh, $query, $yup, @args);
+        post_query($log);
+        return $retval;
+    };
+
+    *DBI::db::do = sub {
+        my ($dbh, $query, $yup, @args) = @_;
+        my $log = pre_query("do", $dbh, undef, $query, \@args);
+        my $retval = $orig{do}->($dbh, $query, $yup, @args);
+        post_query($log);
+        return $retval;
+    };
+}
+
+sub uninstall {
+    return unless is_installed();
+    no strict 'refs';
+    no warnings 'redefine';
+    foreach my $key (keys %orig) {
+        *{"DBI::db::$key"} = delete $orig{$key};
+    }
+    return;
+}
 
 sub import {
     my ($package, %args) = @_;
@@ -304,6 +323,8 @@ sub to_json {
     return $out;
 }
 
+install();
+
 1;
 
 __END__
@@ -430,6 +451,31 @@ behaviour can be disabled by setting C<replace_placeholders> to false:
 This may be useful if you're doing later processing on the log, e.g. parsing
 it and grouping by queries, and want all executions of the same query to
 look alike without the values.
+
+=back
+
+=head1 FUNCTIONS
+
+No functions are exported, nor are they needed in default operational mode.
+
+=over 4
+
+=item C<uninstall>
+
+The C<DBI::Log> module works by wrapping DBI's core functions C<do>, C<execute>,
+C<selectall_arrayref>, C<selectrow_hashref>, et al., with code that 
+inspects/copies the parameters and writes log messages using them.
+
+The C<uninstall> function removes the wrappers to DBI's core functions, 
+restoring the original code to the original symbols.  Naturally, this
+stops the logging.  
+
+You can use the C<install> function to re-enable the logging later.
+
+=item C<is_installed>
+
+This function returns true if the DBI functions are wrapped (logging is 
+enabled), false otherwise.
 
 =back
 
