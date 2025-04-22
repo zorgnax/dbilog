@@ -212,10 +212,12 @@ sub pre_query {
         if ($sth && $sth->{ParamValues}) {
             %values = %{$sth->{ParamValues}};
         }
-        for my $key (keys %values) {
-            if (defined $key && $key =~ /^\d+$/) {
-                $args_copy[$key - 1] = $values{$key};
-            }
+        foreach my $key (keys %values) {
+            # expecting keys are placeholder index starting at 1 (not all drivers conform)
+            next unless defined $key && $key =~ /^\d+$/;
+            # with ->do or ->execute, values not populated prior to execution
+            next unless defined $values{$key};
+            $args_copy[$key - 1] = $values{$key};
         }
 
         for my $i (0 .. @args_copy - 1) {
