@@ -228,6 +228,7 @@ sub pre_query {
     }
 
     $query =~ s/^\s*\n|\s*$//g;
+    $query =~ s/;*$/;/;
     $log->{time_started} = Time::HiRes::time();
     $log->{query} = $query;
     $log->{stack} = \@stack;
@@ -465,18 +466,18 @@ No functions are exported, nor are they needed in default operational mode.
 =item C<uninstall>
 
 The C<DBI::Log> module works by wrapping DBI's core functions C<do>, C<execute>,
-C<selectall_arrayref>, C<selectrow_hashref>, et al., with code that 
+C<selectall_arrayref>, C<selectrow_hashref>, et al., with code that
 inspects/copies the parameters and writes log messages using them.
 
-The C<uninstall> function removes the wrappers to DBI's core functions, 
+The C<uninstall> function removes the wrappers to DBI's core functions,
 restoring the original code to the original symbols.  Naturally, this
-stops the logging.  
+stops the logging.
 
 You can use the C<install> function to re-enable the logging later.
 
 =item C<is_installed>
 
-This function returns true if the DBI functions are wrapped (logging is 
+This function returns true if the DBI functions are wrapped (logging is
 enabled), false otherwise.
 
 =back
