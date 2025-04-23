@@ -204,20 +204,32 @@ sub pre_query {
 
     if ($dbh && $opts{replace_placeholders}) {
         # When you use $sth->bind_param(1, "value") the params can be found in
-        # $sth->{ParamValues} and they override arguments sent in to
-        # $sth->execute()
+        # $sth->{ParamValues} prior to execution, but they are overridden by
+        # values given as arguments to $sth->execute().  If code does not use
+        # bind_param, values in the ParamValues hashref are unpopulated (undef)
+        # prior to first execution, and therefore ParamValues is frequently
+        # not useful here.
+        # (Worse, values will be stale (wrong) prior to a second execution.)
+        # TODO: stop using ParamValues prior to execution
 
         my @args_copy = @$args;
-        my %values;
-        if ($sth && $sth->{ParamValues}) {
-            %values = %{$sth->{ParamValues}};
-        }
-        foreach my $key (keys %values) {
-            # expecting keys are placeholder index starting at 1 (not all drivers conform)
-            next unless defined $key && $key =~ /^\d+$/;
-            # with ->do or ->execute, values not populated prior to execution
-            next unless defined $values{$key};
-            $args_copy[$key - 1] = $values{$key};
+
+        my $values = $sth && $sth->{ParamValues};
+        # with ->do or ->execute, values not populated prior to execution. so,
+        # only attempt to use it if there are keys _and_ defined values:
+        if ($values && %$values && grep defined, values %$values) {
+            # DBI docs suggest this attribute have integer keys starting with 1
+            # but some drivers (e.g. DBD::mysql 4.53, 5.09) start indexing at 0,
+            # so we handle either situation.
+            # some drivers may use named placeholders, et al. not usable.
+            my @k = sort {$a <=> $b} grep /^\d+$/, keys %$values;
+            if (@k) {
+                my $lowest = $k[0];  # expect 0 or 1
+                foreach my $place (@k) {
+                    next unless defined $values->{$place};
+                    $args_copy[$place - $lowest] = $values->{$place};
+                }
+            }
         }
 
         for my $i (0 .. @args_copy - 1) {
